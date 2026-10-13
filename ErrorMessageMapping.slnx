@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="ErrorMessageMapping.Application/ErrorMessageMapping.Application.csproj" />
+    <Project Path="ErrorMessageMapping.Domain/ErrorMessageMapping.Domain.csproj" />
+    <Project Path="ErrorMessageMapping.Infrastructure/ErrorMessageMapping.Infrastructure.csproj" />
+    <Project Path="ErrorMessageMapping.Web/ErrorMessageMapping.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="ErrorMessageMapping.Application.Tests/ErrorMessageMapping.Application.Tests.csproj" />
+  </Folder>
+</Solution>
