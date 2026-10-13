@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ErrorMessageMapping.Application\ErrorMessageMapping.Application.csproj" />
+    <ProjectReference Include="..\ErrorMessageMapping.Domain\ErrorMessageMapping.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
