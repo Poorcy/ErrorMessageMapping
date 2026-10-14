@@ -98,4 +98,11 @@ public class ErrorMessageMappingService
 
         return true;
     }
+
+    public async Task AddMappingAsync(ErrorMapping mapping)
+    {
+        mapping.CreatedAt = DateTime.UtcNow;
+        await _repository.AddAsync(mapping);
+        await _repository.SaveChangesAsync();
+    }
 }

@@ -20,4 +20,14 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
             .OrderBy(x => x.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task AddAsync(ErrorMapping mapping)
+    {
+        await _context.ErrorMappings.AddAsync(mapping);
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _context.SaveChangesAsync();
+    }
 }

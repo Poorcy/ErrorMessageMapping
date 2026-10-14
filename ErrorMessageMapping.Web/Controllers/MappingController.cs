@@ -1,4 +1,5 @@
 ﻿using ErrorMessageMapping.Application;
+using ErrorMessageMapping.Domain;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ErrorMessageMapping.Web.Controllers;
@@ -27,5 +28,19 @@ public class MappingController : ControllerBase
 
         var result = await _service.ConvertAsync(request.Message);
         return Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] ErrorMapping mapping)
+    {
+        if (string.IsNullOrWhiteSpace(mapping.MatchValue1))
+            return BadRequest("MatchValue1 is required.");
+
+        if (mapping.MatchType != MappingConstants.MatchTypeExact &&
+            mapping.MatchType != MappingConstants.MatchTypeFuzzy)
+            return BadRequest("MatchType must be Exact or Fuzzy.");
+
+        await _service.AddMappingAsync(mapping);
+        return Ok(mapping);
     }
 }
