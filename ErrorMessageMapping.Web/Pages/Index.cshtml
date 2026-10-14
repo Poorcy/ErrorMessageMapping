@@ -1,0 +1,33 @@
+﻿@page
+@model ErrorMessageMapping.Web.Pages.IndexModel
+@{
+    ViewData["Title"] = "錯誤訊息規則";
+}
+
+<h1>錯誤訊息規則</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>類型</th>
+            <th>條件 1</th>
+            <th>條件 2</th>
+            <th>條件 3</th>
+            <th>替換訊息</th>
+            <th>建立時間</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Mappings)
+        {
+            <tr>
+                <td>@item.MatchType</td>
+                <td>@item.MatchValue1</td>
+                <td>@item.MatchValue2</td>
+                <td>@item.MatchValue3</td>
+                <td>@item.ReplaceMessage</td>
+                <td>@item.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+            </tr>
+        }
+    </tbody>
+</table>

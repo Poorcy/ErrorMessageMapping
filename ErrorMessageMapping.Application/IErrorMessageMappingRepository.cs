@@ -7,4 +7,5 @@ public interface IErrorMessageMappingRepository
     Task<List<ErrorMapping>> GetByMatchTypeAsync(string matchType);
     Task AddAsync(ErrorMapping mapping);
     Task SaveChangesAsync();
+    Task<List<ErrorMapping>> GetAllAsync();
 }

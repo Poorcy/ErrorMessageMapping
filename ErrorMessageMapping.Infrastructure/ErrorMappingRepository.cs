@@ -30,4 +30,11 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
     {
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<ErrorMapping>> GetAllAsync()
+    {
+        return await _context.ErrorMappings
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync();
+    }
 }
