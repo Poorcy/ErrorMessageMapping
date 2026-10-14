@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.32">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.32" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ErrorMessageMapping.Application\ErrorMessageMapping.Application.csproj" />
     <ProjectReference Include="..\ErrorMessageMapping.Domain\ErrorMessageMapping.Domain.csproj" />
   </ItemGroup>
