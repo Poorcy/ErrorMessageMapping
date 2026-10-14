@@ -6,6 +6,44 @@
 
 <h1>錯誤訊息規則</h1>
 
+<h2>新增規則</h2>
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label>類型</label>
+        <select name="NewMapping.MatchType" class="form-control">
+            <option value="Exact">Exact</option>
+            <option value="Fuzzy">Fuzzy</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>條件 1（必填）</label>
+        <input name="NewMapping.MatchValue1" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label>條件 2</label>
+        <input name="NewMapping.MatchValue2" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label>條件 3</label>
+        <input name="NewMapping.MatchValue3" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label>替換訊息</label>
+        <input name="NewMapping.ReplaceMessage" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">新增</button>
+</form>
+
+<hr />
+
 <table class="table">
     <thead>
         <tr>
