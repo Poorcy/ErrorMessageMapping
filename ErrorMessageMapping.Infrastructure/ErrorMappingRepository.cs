@@ -31,12 +31,12 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<ErrorMapping>> GetAllAsync()
-    {
-        return await _context.ErrorMappings
-            .OrderBy(x => x.CreatedAt)
-            .ToListAsync();
-    }
+    //public async Task<List<ErrorMapping>> GetAllAsync()
+    //{
+    //    return await _context.ErrorMappings
+    //        .OrderBy(x => x.CreatedAt)
+    //        .ToListAsync();
+    //}
 
     public async Task DeleteAsync(int id)
     {
@@ -45,5 +45,39 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
         {
             _context.ErrorMappings.Remove(entity);
         }
+    }
+
+    public async Task<(List<ErrorMapping> Items, int TotalCount)> GetPagedAsync(string? keyword, int page, int pageSize)
+    {
+        var query = _context.ErrorMappings.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            keyword = keyword.Trim();
+            query = query.Where(x =>
+                x.MatchValue1.Contains(keyword) ||
+                (x.MatchValue2 != null && x.MatchValue2.Contains(keyword)) ||
+                (x.MatchValue3 != null && x.MatchValue3.Contains(keyword)) ||
+                (x.ReplaceMessage != null && x.ReplaceMessage.Contains(keyword)));
+        }
+
+        var total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<ErrorMapping?> GetByIdAsync(int id)
+    {
+        return await _context.ErrorMappings.FindAsync(id);
+    }
+
+    public async Task UpdateAsync(ErrorMapping mapping)
+    {
+        _context.ErrorMappings.Update(mapping);
     }
 }

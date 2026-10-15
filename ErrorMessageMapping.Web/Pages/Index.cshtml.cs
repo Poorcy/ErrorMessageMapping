@@ -8,6 +8,7 @@ namespace ErrorMessageMapping.Web.Pages;
 public class IndexModel : PageModel
 {
     private readonly IErrorMessageMappingRepository _repository;
+    private const int PageSize = 10;
 
     public IndexModel(IErrorMessageMappingRepository repository)
     {
@@ -15,52 +16,82 @@ public class IndexModel : PageModel
     }
 
     public List<ErrorMapping> Mappings { get; set; } = new();
+    public int CurrentPage { get; set; } = 1;
+    public int TotalPages { get; set; }
+    public string? Keyword { get; set; }
 
     [BindProperty]
     public ErrorMapping NewMapping { get; set; } = new();
 
-    public async Task OnGetAsync()
+    [BindProperty]
+    public ErrorMapping EditMapping { get; set; } = new();
+
+    public async Task OnGetAsync([FromQuery] string? keyword, [FromQuery] int page = 1)
     {
-        Mappings = await _repository.GetAllAsync();
+        //System.Diagnostics.Debug.WriteLine($"=== OnGet keyword=[{keyword}], page={page} ===");
+
+        Keyword = keyword;
+        CurrentPage = page < 1 ? 1 : page;
+
+        var (items, total) = await _repository.GetPagedAsync(keyword, CurrentPage, PageSize);
+        Mappings = items;
+        TotalPages = (int)Math.Ceiling(total / (double)PageSize);
+
+        //System.Diagnostics.Debug.WriteLine($"=== 回傳 {items.Count} 筆，總頁數 {TotalPages} ===");
     }
 
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync([FromQuery] string? keyword, [FromQuery] int page = 1)
     {
         if (string.IsNullOrWhiteSpace(NewMapping.MatchValue1))
         {
-            ModelState.AddModelError("NewMapping.MatchValue1", "條件 1 為必填");
-            Mappings = await _repository.GetAllAsync();
+            await OnGetAsync(keyword, page);
             return Page();
-        }
-
-        if (NewMapping.MatchType != MappingConstants.MatchTypeExact &&
-            NewMapping.MatchType != MappingConstants.MatchTypeFuzzy)
-        {
-            NewMapping.MatchType = MappingConstants.MatchTypeExact;
         }
 
         NewMapping.CreatedAt = DateTime.UtcNow;
         NewMapping.CreatedBy = "Web";
+        if (NewMapping.MatchType != "Exact" && NewMapping.MatchType != "Fuzzy")
+            NewMapping.MatchType = "Exact";
 
         await _repository.AddAsync(NewMapping);
         await _repository.SaveChangesAsync();
-
-        return RedirectToPage();
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    public async Task<IActionResult> OnPostDeleteAsync(int id, string? keyword, int page = 1)
     {
         await _repository.DeleteAsync(id);
         await _repository.SaveChangesAsync();
-        return RedirectToPage();
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
     }
 
-    public async Task<IActionResult> OnPostImportAsync(IFormFile csvFile)
+    public async Task<IActionResult> OnPostEditAsync(string? keyword, int page = 1)
     {
+        var existing = await _repository.GetByIdAsync(EditMapping.Id);
+        if (existing == null)
+            return RedirectToPage(new { keyword, page });
+
+        existing.MatchType = EditMapping.MatchType;
+        existing.MatchValue1 = EditMapping.MatchValue1;
+        existing.MatchValue2 = EditMapping.MatchValue2;
+        existing.MatchValue3 = EditMapping.MatchValue3;
+        existing.ReplaceMessage = EditMapping.ReplaceMessage;
+
+        await _repository.UpdateAsync(existing);
+        await _repository.SaveChangesAsync();
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
+    }
+
+    public async Task<IActionResult> OnPostImportAsync(IFormFile csvFile, string? keyword, int page = 1)
+    {
+        // 保留你原本的 CSV 匯入邏輯，最後改成：
+        // return RedirectToPage(new { keyword, page });
+        // （請把原本方法裡的 RedirectToPage() 換成帶參數的版本）
+
         if (csvFile == null || csvFile.Length == 0)
         {
             TempData["Message"] = "請選擇 CSV 檔案";
-            return RedirectToPage();
+            return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
         }
 
         using var reader = new StreamReader(csvFile.OpenReadStream());
@@ -70,18 +101,11 @@ public class IndexModel : PageModel
         {
             var line = await reader.ReadLineAsync();
             lineNumber++;
-
-            // 跳過標題列
-            if (lineNumber == 1 && line != null && line.Contains("MatchType"))
-                continue;
-
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
+            if (lineNumber == 1 && line != null && line.Contains("MatchType")) continue;
+            if (string.IsNullOrWhiteSpace(line)) continue;
 
             var parts = line.Split(',');
-
-            if (parts.Length < 2)
-                continue;
+            if (parts.Length < 2) continue;
 
             var mapping = new ErrorMapping
             {
@@ -94,18 +118,15 @@ public class IndexModel : PageModel
                 CreatedBy = "CSV"
             };
 
-            if (string.IsNullOrWhiteSpace(mapping.MatchValue1))
-                continue;
-
-            if (mapping.MatchType != MappingConstants.MatchTypeExact &&
-                mapping.MatchType != MappingConstants.MatchTypeFuzzy)
-                mapping.MatchType = MappingConstants.MatchTypeExact;
+            if (string.IsNullOrWhiteSpace(mapping.MatchValue1)) continue;
+            if (mapping.MatchType != "Exact" && mapping.MatchType != "Fuzzy")
+                mapping.MatchType = "Exact";
 
             await _repository.AddAsync(mapping);
         }
 
         await _repository.SaveChangesAsync();
         TempData["Message"] = "CSV 匯入完成";
-        return RedirectToPage();
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
     }
 }

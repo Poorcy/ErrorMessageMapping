@@ -5,8 +5,10 @@ namespace ErrorMessageMapping.Application;
 public interface IErrorMessageMappingRepository
 {
     Task<List<ErrorMapping>> GetByMatchTypeAsync(string matchType);
+    Task<(List<ErrorMapping> Items, int TotalCount)> GetPagedAsync(string? keyword, int page, int pageSize);
+    Task<ErrorMapping?> GetByIdAsync(int id);
     Task AddAsync(ErrorMapping mapping);
-    Task SaveChangesAsync();
-    Task<List<ErrorMapping>> GetAllAsync();
+    Task UpdateAsync(ErrorMapping mapping);
     Task DeleteAsync(int id);
+    Task SaveChangesAsync();
 }

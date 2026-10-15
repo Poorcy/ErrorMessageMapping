@@ -21,6 +21,21 @@
             <div class="alert alert-info">@TempData["Message"]</div>
         }
 
+        <!-- 查詢 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-6">
+                        <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="搜尋條件或替換訊息..." />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-primary">查詢</button>
+                        <a href="/" class="btn btn-outline-secondary">清除</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- 新增規則 -->
         <div class="card mb-4">
             <div class="card-header">新增規則</div>
@@ -82,7 +97,10 @@
 
         <!-- 規則列表 -->
         <div class="card">
-            <div class="card-header">規則列表</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>規則列表</span>
+                <small class="text-muted">第 @Model.CurrentPage / @Model.TotalPages 頁</small>
+            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
@@ -94,7 +112,7 @@
                                 <th>條件 3</th>
                                 <th>替換訊息</th>
                                 <th>建立時間</th>
-                                <th style="width: 80px;"></th>
+                                <th style="width: 140px;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -112,9 +130,21 @@
                                     <td>@item.ReplaceMessage</td>
                                     <td>@item.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                                     <td>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm me-1"
+                                                data-bs-toggle="modal" data-bs-target="#editModal"
+                                                data-id="@item.Id"
+                                                data-type="@item.MatchType"
+                                                data-v1="@item.MatchValue1"
+                                                data-v2="@item.MatchValue2"
+                                                data-v3="@item.MatchValue3"
+                                                data-replace="@item.ReplaceMessage">
+                                            修改
+                                        </button>
                                         <form method="post" action="?handler=Delete" style="display:inline;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
+                                            <input type="hidden" name="keyword" value="@Model.Keyword" />
+                                            <input type="hidden" name="page" value="@Model.CurrentPage" />
                                             <button type="submit" class="btn btn-outline-danger btn-sm"
                                                     onclick="return confirm('確定要刪除這筆規則嗎？');">
                                                 刪除
@@ -127,9 +157,88 @@
                     </table>
                 </div>
             </div>
+
+            <!-- 分頁 -->
+            @if (Model.TotalPages > 1)
+            {
+                <div class="card-footer">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="?keyword=@Model.Keyword&page=@i">@i</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+            }
+        </div>
+
+        <!-- 修改 Modal -->
+        <div class="modal fade" id="editModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post" action="?handler=Edit">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="EditMapping.Id" id="editId" />
+                        <input type="hidden" name="keyword" value="@Model.Keyword" />
+                        <input type="hidden" name="page" value="@Model.CurrentPage" />
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">修改規則</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">類型</label>
+                                <select name="EditMapping.MatchType" id="editType" class="form-select">
+                                    <option value="Exact">Exact</option>
+                                    <option value="Fuzzy">Fuzzy</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">條件 1</label>
+                                <input name="EditMapping.MatchValue1" id="editV1" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">條件 2</label>
+                                <input name="EditMapping.MatchValue2" id="editV2" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">條件 3</label>
+                                <input name="EditMapping.MatchValue3" id="editV3" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">替換訊息</label>
+                                <input name="EditMapping.ReplaceMessage" id="editReplace" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary">儲存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+            const editModal = document.getElementById('editModal');
+            if (editModal) {
+                editModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    document.getElementById('editId').value = button.getAttribute('data-id');
+                    document.getElementById('editType').value = button.getAttribute('data-type');
+                    document.getElementById('editV1').value = button.getAttribute('data-v1') || '';
+                    document.getElementById('editV2').value = button.getAttribute('data-v2') || '';
+                    document.getElementById('editV3').value = button.getAttribute('data-v3') || '';
+                    document.getElementById('editReplace').value = button.getAttribute('data-replace') || '';
+                });
+            }
+    </script>
 </body>
 </html>
