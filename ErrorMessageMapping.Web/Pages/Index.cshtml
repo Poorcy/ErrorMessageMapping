@@ -44,6 +44,23 @@
 
 <hr />
 
+<h2>CSV 匯入</h2>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-info">@TempData["Message"]</div>
+}
+
+<form method="post" enctype="multipart/form-data" action="?handler=Import">
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <input type="file" name="csvFile" accept=".csv" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-success">匯入 CSV</button>
+</form>
+
+<hr />
+
 <table class="table">
     <thead>
         <tr>
