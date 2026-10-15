@@ -69,5 +69,6 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.MapRazorPages();
+app.MapGet("/", () => Results.Redirect("/Index"));
 
 app.Run();
