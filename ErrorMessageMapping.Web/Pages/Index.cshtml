@@ -65,6 +65,16 @@
                 <td>@item.MatchValue3</td>
                 <td>@item.ReplaceMessage</td>
                 <td>@item.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td>
+                    <form method="post" action="?handler=Delete" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@item.Id" />
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('確定要刪除這筆規則嗎？');">
+                            刪除
+                        </button>
+                    </form>
+                </td>
             </tr>
         }
     </tbody>

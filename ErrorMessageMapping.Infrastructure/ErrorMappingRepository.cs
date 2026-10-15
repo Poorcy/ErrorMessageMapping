@@ -37,4 +37,13 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
             .OrderBy(x => x.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task DeleteAsync(int id)
+    {
+        var entity = await _context.ErrorMappings.FindAsync(id);
+        if (entity != null)
+        {
+            _context.ErrorMappings.Remove(entity);
+        }
+    }
 }

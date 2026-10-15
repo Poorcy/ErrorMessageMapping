@@ -8,4 +8,5 @@ public interface IErrorMessageMappingRepository
     Task AddAsync(ErrorMapping mapping);
     Task SaveChangesAsync();
     Task<List<ErrorMapping>> GetAllAsync();
+    Task DeleteAsync(int id);
 }
