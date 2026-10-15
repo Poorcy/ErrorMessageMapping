@@ -47,9 +47,14 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
         }
     }
 
-    public async Task<(List<ErrorMapping> Items, int TotalCount)> GetPagedAsync(string? keyword, int page, int pageSize)
+    public async Task<(List<ErrorMapping> Items, int TotalCount)> GetPagedAsync(string? keyword, string? matchType, int page, int pageSize)
     {
         var query = _context.ErrorMappings.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(matchType))
+        {
+            query = query.Where(x => x.MatchType == matchType);
+        }
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {

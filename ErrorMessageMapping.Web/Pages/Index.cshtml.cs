@@ -19,6 +19,7 @@ public class IndexModel : PageModel
     public int CurrentPage { get; set; } = 1;
     public int TotalPages { get; set; }
     public string? Keyword { get; set; }
+    public string? MatchType { get; set; }
 
     [BindProperty]
     public ErrorMapping NewMapping { get; set; } = new();
@@ -26,25 +27,22 @@ public class IndexModel : PageModel
     [BindProperty]
     public ErrorMapping EditMapping { get; set; } = new();
 
-    public async Task OnGetAsync([FromQuery] string? keyword, [FromQuery] int page = 1)
+    public async Task OnGetAsync([FromQuery] string? keyword, [FromQuery] string? matchType, [FromQuery] int page = 1)
     {
-        //System.Diagnostics.Debug.WriteLine($"=== OnGet keyword=[{keyword}], page={page} ===");
-
         Keyword = keyword;
+        MatchType = matchType;
         CurrentPage = page < 1 ? 1 : page;
 
-        var (items, total) = await _repository.GetPagedAsync(keyword, CurrentPage, PageSize);
+        var (items, total) = await _repository.GetPagedAsync(keyword, matchType, CurrentPage, PageSize);
         Mappings = items;
         TotalPages = (int)Math.Ceiling(total / (double)PageSize);
-
-        //System.Diagnostics.Debug.WriteLine($"=== 回傳 {items.Count} 筆，總頁數 {TotalPages} ===");
     }
 
-    public async Task<IActionResult> OnPostAsync([FromQuery] string? keyword, [FromQuery] int page = 1)
+    public async Task<IActionResult> OnPostAsync([FromQuery] string? keyword, [FromQuery] string? matchType, [FromQuery] int page = 1)
     {
         if (string.IsNullOrWhiteSpace(NewMapping.MatchValue1))
         {
-            await OnGetAsync(keyword, page);
+            await OnGetAsync(keyword, matchType, page);
             return Page();
         }
 
@@ -55,21 +53,21 @@ public class IndexModel : PageModel
 
         await _repository.AddAsync(NewMapping);
         await _repository.SaveChangesAsync();
-        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int id, string? keyword, int page = 1)
+    public async Task<IActionResult> OnPostDeleteAsync(int id, string? keyword, string? matchType, int page = 1)
     {
         await _repository.DeleteAsync(id);
         await _repository.SaveChangesAsync();
-        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 
-    public async Task<IActionResult> OnPostEditAsync(string? keyword, int page = 1)
+    public async Task<IActionResult> OnPostEditAsync(string? keyword, string? matchType, int page = 1)
     {
         var existing = await _repository.GetByIdAsync(EditMapping.Id);
         if (existing == null)
-            return RedirectToPage(new { keyword, page });
+            return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
 
         existing.MatchType = EditMapping.MatchType;
         existing.MatchValue1 = EditMapping.MatchValue1;
@@ -79,19 +77,19 @@ public class IndexModel : PageModel
 
         await _repository.UpdateAsync(existing);
         await _repository.SaveChangesAsync();
-        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 
-    public async Task<IActionResult> OnPostImportAsync(IFormFile csvFile, string? keyword, int page = 1)
+    public async Task<IActionResult> OnPostImportAsync(IFormFile csvFile, string? keyword, string? matchType, int page = 1)
     {
         // 保留你原本的 CSV 匯入邏輯，最後改成：
-        // return RedirectToPage(new { keyword, page });
+        // return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
         // （請把原本方法裡的 RedirectToPage() 換成帶參數的版本）
 
         if (csvFile == null || csvFile.Length == 0)
         {
             TempData["Message"] = "請選擇 CSV 檔案";
-            return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
+            return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
         }
 
         using var reader = new StreamReader(csvFile.OpenReadStream());
@@ -127,6 +125,6 @@ public class IndexModel : PageModel
 
         await _repository.SaveChangesAsync();
         TempData["Message"] = "CSV 匯入完成";
-        return RedirectToPage("/Index", new { keyword = keyword ?? "", page });
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 }

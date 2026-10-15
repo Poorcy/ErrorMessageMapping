@@ -25,10 +25,17 @@
         <div class="card mb-4">
             <div class="card-body">
                 <form method="get" class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="搜尋條件或替換訊息..." />
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
+                        <select name="matchType" class="form-select">
+                            <option value="">全部類型</option>
+                            <option value="Exact" selected="@(Model.MatchType == "Exact")">精準</option>
+                            <option value="Fuzzy" selected="@(Model.MatchType == "Fuzzy")">模糊</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <button type="submit" class="btn btn-outline-primary">查詢</button>
                         <a href="/" class="btn btn-outline-secondary">清除</a>
                     </div>
@@ -46,8 +53,8 @@
                         <div class="col-md-2">
                             <label class="form-label">類型</label>
                             <select name="NewMapping.MatchType" class="form-select">
-                                <option value="Exact">Exact</option>
-                                <option value="Fuzzy">Fuzzy</option>
+                                <option value="Exact">精準</option>
+                                <option value="Fuzzy">模糊</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -121,7 +128,7 @@
                                 <tr>
                                     <td>
                                         <span class="badge @(item.MatchType == "Exact" ? "bg-primary" : "bg-info")">
-                                            @item.MatchType
+                                            @(item.MatchType == "Exact" ? "精準" : "模糊")
                                         </span>
                                     </td>
                                     <td>@item.MatchValue1</td>
@@ -167,7 +174,7 @@
                             @for (int i = 1; i <= Model.TotalPages; i++)
                             {
                                 <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
-                                    <a class="page-link" href="?keyword=@Model.Keyword&page=@i">@i</a>
+                                    <a class="page-link" href="?keyword=@Model.Keyword&matchType=@Model.MatchType&page=@i">@i</a>
                                 </li>
                             }
                         </ul>
@@ -184,6 +191,7 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="EditMapping.Id" id="editId" />
                         <input type="hidden" name="keyword" value="@Model.Keyword" />
+                        <input type="hidden" name="matchType" value="@Model.MatchType" />
                         <input type="hidden" name="page" value="@Model.CurrentPage" />
 
                         <div class="modal-header">
@@ -194,8 +202,8 @@
                             <div class="mb-3">
                                 <label class="form-label">類型</label>
                                 <select name="EditMapping.MatchType" id="editType" class="form-select">
-                                    <option value="Exact">Exact</option>
-                                    <option value="Fuzzy">Fuzzy</option>
+                                    <option value="Exact">精準</option>
+                                    <option value="Fuzzy">模糊</option>
                                 </select>
                             </div>
                             <div class="mb-3">
