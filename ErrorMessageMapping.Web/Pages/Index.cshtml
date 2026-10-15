@@ -1,98 +1,135 @@
 ﻿@page
 @model ErrorMessageMapping.Web.Pages.IndexModel
 @{
-    ViewData["Title"] = "錯誤訊息規則";
+    ViewData["Title"] = "錯誤訊息規則維護";
 }
 
-<h1>錯誤訊息規則</h1>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h1 class="mb-4">錯誤訊息規則維護</h1>
 
-<h2>新增規則</h2>
-
-<form method="post">
-    @Html.AntiForgeryToken()
-
-    <div class="mb-3">
-        <label>類型</label>
-        <select name="NewMapping.MatchType" class="form-control">
-            <option value="Exact">Exact</option>
-            <option value="Fuzzy">Fuzzy</option>
-        </select>
-    </div>
-
-    <div class="mb-3">
-        <label>條件 1（必填）</label>
-        <input name="NewMapping.MatchValue1" class="form-control" />
-    </div>
-
-    <div class="mb-3">
-        <label>條件 2</label>
-        <input name="NewMapping.MatchValue2" class="form-control" />
-    </div>
-
-    <div class="mb-3">
-        <label>條件 3</label>
-        <input name="NewMapping.MatchValue3" class="form-control" />
-    </div>
-
-    <div class="mb-3">
-        <label>替換訊息</label>
-        <input name="NewMapping.ReplaceMessage" class="form-control" />
-    </div>
-
-    <button type="submit" class="btn btn-primary">新增</button>
-</form>
-
-<hr />
-
-<h2>CSV 匯入</h2>
-
-@if (TempData["Message"] != null)
-{
-    <div class="alert alert-info">@TempData["Message"]</div>
-}
-
-<form method="post" enctype="multipart/form-data" action="?handler=Import">
-    @Html.AntiForgeryToken()
-    <div class="mb-3">
-        <input type="file" name="csvFile" accept=".csv" class="form-control" />
-    </div>
-    <button type="submit" class="btn btn-success">匯入 CSV</button>
-</form>
-
-<hr />
-
-<table class="table">
-    <thead>
-        <tr>
-            <th>類型</th>
-            <th>條件 1</th>
-            <th>條件 2</th>
-            <th>條件 3</th>
-            <th>替換訊息</th>
-            <th>建立時間</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Mappings)
+        @if (TempData["Message"] != null)
         {
-            <tr>
-                <td>@item.MatchType</td>
-                <td>@item.MatchValue1</td>
-                <td>@item.MatchValue2</td>
-                <td>@item.MatchValue3</td>
-                <td>@item.ReplaceMessage</td>
-                <td>@item.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
-                <td>
-                    <form method="post" action="?handler=Delete" style="display:inline;">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@item.Id" />
-                        <button type="submit" class="btn btn-danger btn-sm"
-                                onclick="return confirm('確定要刪除這筆規則嗎？');">
-                            刪除
-                        </button>
-                    </form>
-                </td>
-            </tr>
+            <div class="alert alert-info">@TempData["Message"]</div>
         }
-    </tbody>
-</table>
+
+        <!-- 新增規則 -->
+        <div class="card mb-4">
+            <div class="card-header">新增規則</div>
+            <div class="card-body">
+                <form method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label">類型</label>
+                            <select name="NewMapping.MatchType" class="form-select">
+                                <option value="Exact">Exact</option>
+                                <option value="Fuzzy">Fuzzy</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">條件 1（必填）</label>
+                            <input name="NewMapping.MatchValue1" class="form-control" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">條件 2</label>
+                            <input name="NewMapping.MatchValue2" class="form-control" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">條件 3</label>
+                            <input name="NewMapping.MatchValue3" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">替換訊息</label>
+                            <input name="NewMapping.ReplaceMessage" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">新增</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CSV 匯入 -->
+        <div class="card mb-4">
+            <div class="card-header">CSV 匯入</div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" action="?handler=Import">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <input type="file" name="csvFile" accept=".csv" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-success">匯入 CSV</button>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        格式：MatchType,MatchValue1,MatchValue2,MatchValue3,ReplaceMessage
+                    </small>
+                </form>
+            </div>
+        </div>
+
+        <!-- 規則列表 -->
+        <div class="card">
+            <div class="card-header">規則列表</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>類型</th>
+                                <th>條件 1</th>
+                                <th>條件 2</th>
+                                <th>條件 3</th>
+                                <th>替換訊息</th>
+                                <th>建立時間</th>
+                                <th style="width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Mappings)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge @(item.MatchType == "Exact" ? "bg-primary" : "bg-info")">
+                                            @item.MatchType
+                                        </span>
+                                    </td>
+                                    <td>@item.MatchValue1</td>
+                                    <td>@item.MatchValue2</td>
+                                    <td>@item.MatchValue3</td>
+                                    <td>@item.ReplaceMessage</td>
+                                    <td>@item.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>
+                                        <form method="post" action="?handler=Delete" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    onclick="return confirm('確定要刪除這筆規則嗎？');">
+                                                刪除
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
