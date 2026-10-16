@@ -47,14 +47,13 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
         }
     }
 
-    public async Task<(List<ErrorMapping> Items, int TotalCount)> GetPagedAsync(string? keyword, string? matchType, int page, int pageSize)
+    public async Task<(List<ErrorMapping> Items, int TotalCount)> GetPagedAsync(
+    string? keyword, string? matchType, string? sort, int page, int pageSize)
     {
         var query = _context.ErrorMappings.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(matchType))
-        {
             query = query.Where(x => x.MatchType == matchType);
-        }
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
@@ -66,9 +65,16 @@ public class ErrorMappingRepository : IErrorMessageMappingRepository
                 (x.ReplaceMessage != null && x.ReplaceMessage.Contains(keyword)));
         }
 
+        // 排序
+        query = sort switch
+        {
+            "oldest" => query.OrderBy(x => x.CreatedAt),
+            "type" => query.OrderBy(x => x.MatchType).ThenByDescending(x => x.CreatedAt),
+            _ => query.OrderByDescending(x => x.CreatedAt)   // 預設：最新優先
+        };
+
         var total = await query.CountAsync();
         var items = await query
-            .OrderByDescending(x => x.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

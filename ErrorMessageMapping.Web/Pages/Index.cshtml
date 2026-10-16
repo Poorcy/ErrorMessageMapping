@@ -36,9 +36,16 @@
                         </select>
                     </div>
                     <div class="col-md-3">
+                        <select name="sort" class="form-select">
+                            <option value="newest" selected="@(Model.Sort == "newest" || string.IsNullOrEmpty(Model.Sort))">建立時間（新→舊）</option>
+                            <option value="oldest" selected="@(Model.Sort == "oldest")">建立時間（舊→新）</option>
+                            <option value="type" selected="@(Model.Sort == "type")">以類型排序</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <button type="submit" class="btn btn-outline-primary">查詢</button>
                         <a href="/" class="btn btn-outline-secondary">清除</a>
-                    </div>
+                    </div>                    
                 </form>
             </div>
         </div>
@@ -151,6 +158,8 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
                                             <input type="hidden" name="keyword" value="@Model.Keyword" />
+                                            <input type="hidden" name="matchType" value="@Model.MatchType" />
+                                            <input type="hidden" name="sort" value="@Model.Sort" />
                                             <input type="hidden" name="page" value="@Model.CurrentPage" />
                                             <button type="submit" class="btn btn-outline-danger btn-sm"
                                                     onclick="return confirm('確定要刪除這筆規則嗎？');">
@@ -174,7 +183,7 @@
                             @for (int i = 1; i <= Model.TotalPages; i++)
                             {
                                 <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
-                                    <a class="page-link" href="?keyword=@Model.Keyword&matchType=@Model.MatchType&page=@i">@i</a>
+                                    <a class="page-link" href="?keyword=@Model.Keyword&matchType=@Model.MatchType&sort=@Model.Sort&page=@i">@i</a>
                                 </li>
                             }
                         </ul>
@@ -192,6 +201,7 @@
                         <input type="hidden" name="EditMapping.Id" id="editId" />
                         <input type="hidden" name="keyword" value="@Model.Keyword" />
                         <input type="hidden" name="matchType" value="@Model.MatchType" />
+                        <input type="hidden" name="sort" value="@Model.Sort" />
                         <input type="hidden" name="page" value="@Model.CurrentPage" />
 
                         <div class="modal-header">
@@ -247,6 +257,36 @@
                     document.getElementById('editReplace').value = button.getAttribute('data-replace') || '';
                 });
             }
+
+            // 新增表單：類型改變時控制條件 2、3
+            const newTypeSelect = document.querySelector('select[name="NewMapping.MatchType"]');
+            function toggleNewConditions() {
+                if (!newTypeSelect) return;
+                const isExact = newTypeSelect.value === 'Exact';
+                const v2 = document.querySelector('input[name="NewMapping.MatchValue2"]');
+                const v3 = document.querySelector('input[name="NewMapping.MatchValue3"]');
+                if (v2) { v2.disabled = isExact; if (isExact) v2.value = ''; }
+                if (v3) { v3.disabled = isExact; if (isExact) v3.value = ''; }
+            }
+
+            newTypeSelect?.addEventListener('change', toggleNewConditions);
+
+            // 頁面載入時也執行一次（解決預設是精準但欄位還能輸入的問題）
+            toggleNewConditions();
+
+            // 修改 Modal：開啟時與類型改變時控制
+            const editTypeSelect = document.getElementById('editType');
+            function toggleEditConditions() {
+                const isExact = editTypeSelect.value === 'Exact';
+                const v2 = document.getElementById('editV2');
+                const v3 = document.getElementById('editV3');
+                if (v2) { v2.disabled = isExact; if (isExact) v2.value = ''; }
+                if (v3) { v3.disabled = isExact; if (isExact) v3.value = ''; }
+            }
+            editTypeSelect?.addEventListener('change', toggleEditConditions);
+
+            // Modal 開啟後也執行一次
+            document.getElementById('editModal')?.addEventListener('shown.bs.modal', toggleEditConditions);
     </script>
 </body>
 </html>

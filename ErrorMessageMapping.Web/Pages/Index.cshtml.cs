@@ -20,6 +20,7 @@ public class IndexModel : PageModel
     public int TotalPages { get; set; }
     public string? Keyword { get; set; }
     public string? MatchType { get; set; }
+    public string? Sort { get; set; }
 
     [BindProperty]
     public ErrorMapping NewMapping { get; set; } = new();
@@ -27,13 +28,18 @@ public class IndexModel : PageModel
     [BindProperty]
     public ErrorMapping EditMapping { get; set; } = new();
 
-    public async Task OnGetAsync([FromQuery] string? keyword, [FromQuery] string? matchType, [FromQuery] int page = 1)
+    public async Task OnGetAsync(
+    [FromQuery] string? keyword,
+    [FromQuery] string? matchType,
+    [FromQuery] string? sort,
+    [FromQuery] int page = 1)
     {
         Keyword = keyword;
         MatchType = matchType;
+        Sort = string.IsNullOrWhiteSpace(sort) ? "newest" : sort;
         CurrentPage = page < 1 ? 1 : page;
 
-        var (items, total) = await _repository.GetPagedAsync(keyword, matchType, CurrentPage, PageSize);
+        var (items, total) = await _repository.GetPagedAsync(keyword, matchType, Sort, CurrentPage, PageSize);
         Mappings = items;
         TotalPages = (int)Math.Ceiling(total / (double)PageSize);
     }
@@ -42,7 +48,7 @@ public class IndexModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(NewMapping.MatchValue1))
         {
-            await OnGetAsync(keyword, matchType, page);
+            await OnGetAsync(keyword, matchType, Sort, page);
             return Page();
         }
 
@@ -51,29 +57,41 @@ public class IndexModel : PageModel
         if (NewMapping.MatchType != "Exact" && NewMapping.MatchType != "Fuzzy")
             NewMapping.MatchType = "Exact";
 
+        if (NewMapping.MatchType == "Exact")
+        {
+            NewMapping.MatchValue2 = null;
+            NewMapping.MatchValue3 = null;
+        }
+
         await _repository.AddAsync(NewMapping);
         await _repository.SaveChangesAsync();
         return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int id, string? keyword, string? matchType, int page = 1)
+    public async Task<IActionResult> OnPostDeleteAsync(int id, string? keyword, string? matchType, string? sort, int page = 1)
     {
         await _repository.DeleteAsync(id);
         await _repository.SaveChangesAsync();
-        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "", page = page });
     }
 
-    public async Task<IActionResult> OnPostEditAsync(string? keyword, string? matchType, int page = 1)
+    public async Task<IActionResult> OnPostEditAsync(string? keyword, string? matchType, string? sort, int page = 1)
     {
         var existing = await _repository.GetByIdAsync(EditMapping.Id);
         if (existing == null)
-            return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
+            return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "", page = page });
 
         existing.MatchType = EditMapping.MatchType;
         existing.MatchValue1 = EditMapping.MatchValue1;
         existing.MatchValue2 = EditMapping.MatchValue2;
         existing.MatchValue3 = EditMapping.MatchValue3;
         existing.ReplaceMessage = EditMapping.ReplaceMessage;
+
+        if (EditMapping.MatchType == "Exact")
+        {
+            EditMapping.MatchValue2 = null;
+            EditMapping.MatchValue3 = null;
+        }
 
         await _repository.UpdateAsync(existing);
         await _repository.SaveChangesAsync();
