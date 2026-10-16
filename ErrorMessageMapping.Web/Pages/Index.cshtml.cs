@@ -98,17 +98,16 @@ public class IndexModel : PageModel
         return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 
-    public async Task<IActionResult> OnPostImportAsync(IFormFile csvFile, string? keyword, string? matchType, int page = 1)
+    public async Task<IActionResult> OnPostImportAsync(IFormFile csvFile, string? keyword, string? matchType, string? sort, int page = 1)
     {
-        // 保留你原本的 CSV 匯入邏輯，最後改成：
-        // return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
-        // （請把原本方法裡的 RedirectToPage() 換成帶參數的版本）
-
         if (csvFile == null || csvFile.Length == 0)
         {
             TempData["Message"] = "請選擇 CSV 檔案";
-            return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
+            return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "newest", page });
         }
+
+        int successCount = 0;
+        var skippedDetails = new List<string>();
 
         using var reader = new StreamReader(csvFile.OpenReadStream());
         var lineNumber = 0;
@@ -117,16 +116,39 @@ public class IndexModel : PageModel
         {
             var line = await reader.ReadLineAsync();
             lineNumber++;
-            if (lineNumber == 1 && line != null && line.Contains("MatchType")) continue;
-            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                skippedDetails.Add($"第 {lineNumber} 行：空行");
+                continue;
+            }
+
+            // 標題列
+            if (lineNumber == 1 && line.Contains("MatchType", StringComparison.OrdinalIgnoreCase))
+                continue;
 
             var parts = line.Split(',');
-            if (parts.Length < 2) continue;
+
+            if (parts.Length < 2)
+            {
+                skippedDetails.Add($"第 {lineNumber} 行：欄位不足");
+                continue;
+            }
+
+            var rawType = parts[0].Trim();
+            var rawValue1 = parts.Length > 1 ? parts[1].Trim() : "";
+
+            // MatchType 或 MatchValue1 空白就跳過
+            if (string.IsNullOrWhiteSpace(rawType) || string.IsNullOrWhiteSpace(rawValue1))
+            {
+                skippedDetails.Add($"第 {lineNumber} 行：類型或條件1為空白 → {line}");
+                continue;
+            }
 
             var mapping = new ErrorMapping
             {
-                MatchType = parts[0].Trim(),
-                MatchValue1 = parts.Length > 1 ? parts[1].Trim() : "",
+                MatchType = rawType,
+                MatchValue1 = rawValue1,
                 MatchValue2 = parts.Length > 2 ? parts[2].Trim() : null,
                 MatchValue3 = parts.Length > 3 ? parts[3].Trim() : null,
                 ReplaceMessage = parts.Length > 4 ? parts[4].Trim() : null,
@@ -134,15 +156,38 @@ public class IndexModel : PageModel
                 CreatedBy = "CSV"
             };
 
-            if (string.IsNullOrWhiteSpace(mapping.MatchValue1)) continue;
             if (mapping.MatchType != "Exact" && mapping.MatchType != "Fuzzy")
-                mapping.MatchType = "Exact";
+            {
+                skippedDetails.Add($"第 {lineNumber} 行：類型不正確（{mapping.MatchType}）");
+                continue;
+            }
+
+            if (mapping.MatchType == "Exact")
+            {
+                mapping.MatchValue2 = null;
+                mapping.MatchValue3 = null;
+            }
 
             await _repository.AddAsync(mapping);
+            successCount++;
         }
 
-        await _repository.SaveChangesAsync();
-        TempData["Message"] = "CSV 匯入完成";
-        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
+        if (successCount > 0)
+            await _repository.SaveChangesAsync();
+
+        // 組合訊息
+        var message = $"CSV 匯入完成：成功 {successCount} 筆";
+        if (skippedDetails.Count > 0)
+        {
+            message += $"，跳過 {skippedDetails.Count} 筆";
+            // 只顯示前 5 筆跳過明細，避免訊息過長
+            var preview = string.Join("；", skippedDetails.Take(5));
+            if (skippedDetails.Count > 5)
+                preview += "……";
+            message += $"（{preview}）";
+        }
+
+        TempData["Message"] = message;
+        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "newest", page });
     }
 }
