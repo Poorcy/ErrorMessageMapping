@@ -9,11 +9,14 @@ public class IndexModel : PageModel
 {
     private readonly IErrorMessageMappingRepository _repository;
     private const int PageSize = 10;
+    private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(IErrorMessageMappingRepository repository)
+    public IndexModel(IErrorMessageMappingRepository repository, ILogger<IndexModel> logger)
     {
         _repository = repository;
+        _logger = logger;
     }
+
 
     public List<ErrorMapping> Mappings { get; set; } = new();
     public int CurrentPage { get; set; } = 1;
@@ -65,6 +68,8 @@ public class IndexModel : PageModel
 
         await _repository.AddAsync(NewMapping);
         await _repository.SaveChangesAsync();
+        _logger.LogInformation("Mapping created: Type={Type}, Value1={Value1}",
+            NewMapping.MatchType, NewMapping.MatchValue1);
         return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 
@@ -72,6 +77,7 @@ public class IndexModel : PageModel
     {
         await _repository.DeleteAsync(id);
         await _repository.SaveChangesAsync();
+        _logger.LogInformation("Mapping deleted: Id={Id}", id);
         return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "", page = page });
     }
 
@@ -95,99 +101,118 @@ public class IndexModel : PageModel
 
         await _repository.UpdateAsync(existing);
         await _repository.SaveChangesAsync();
+        _logger.LogInformation("Mapping updated: Id={Id}, Type={Type}",
+            existing.Id, existing.MatchType);
         return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", page });
     }
 
     public async Task<IActionResult> OnPostImportAsync(IFormFile csvFile, string? keyword, string? matchType, string? sort, int page = 1)
     {
-        if (csvFile == null || csvFile.Length == 0)
+        try
         {
-            TempData["Message"] = "請選擇 CSV 檔案";
+            if (csvFile == null || csvFile.Length == 0)
+            {
+                TempData["Message"] = "請選擇 CSV 檔案";
+                return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "newest", page });
+            }
+
+            int successCount = 0;
+            var skippedDetails = new List<string>();
+
+            using var reader = new StreamReader(csvFile.OpenReadStream());
+            var lineNumber = 0;
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                lineNumber++;
+
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    skippedDetails.Add($"第 {lineNumber} 行：空行");
+                    continue;
+                }
+
+                // 標題列
+                if (lineNumber == 1 && line.Contains("MatchType", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var parts = line.Split(',');
+
+                if (parts.Length < 2)
+                {
+                    skippedDetails.Add($"第 {lineNumber} 行：欄位不足");
+                    continue;
+                }
+
+                var rawType = parts[0].Trim();
+                var rawValue1 = parts.Length > 1 ? parts[1].Trim() : "";
+
+                // MatchType 或 MatchValue1 空白就跳過
+                if (string.IsNullOrWhiteSpace(rawType) || string.IsNullOrWhiteSpace(rawValue1))
+                {
+                    skippedDetails.Add($"第 {lineNumber} 行：類型或條件1為空白 → {line}");
+                    continue;
+                }
+
+                var mapping = new ErrorMapping
+                {
+                    MatchType = rawType,
+                    MatchValue1 = rawValue1,
+                    MatchValue2 = parts.Length > 2 ? parts[2].Trim() : null,
+                    MatchValue3 = parts.Length > 3 ? parts[3].Trim() : null,
+                    ReplaceMessage = parts.Length > 4 ? parts[4].Trim() : null,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "CSV"
+                };
+
+                if (mapping.MatchType != "Exact" && mapping.MatchType != "Fuzzy")
+                {
+                    skippedDetails.Add($"第 {lineNumber} 行：類型不正確（{mapping.MatchType}）");
+                    continue;
+                }
+
+                if (mapping.MatchType == "Exact")
+                {
+                    mapping.MatchValue2 = null;
+                    mapping.MatchValue3 = null;
+                }
+
+                await _repository.AddAsync(mapping);
+                successCount++;
+            }
+
+            if (successCount > 0)
+                await _repository.SaveChangesAsync();
+
+            // 組合訊息
+            var message = $"CSV 匯入完成：成功 {successCount} 筆";
+            if (skippedDetails.Count > 0)
+            {
+                message += $"，跳過 {skippedDetails.Count} 筆";
+                // 只顯示前 5 筆跳過明細，避免訊息過長
+                var preview = string.Join("；", skippedDetails.Take(5));
+                if (skippedDetails.Count > 5)
+                    preview += "……";
+                message += $"（{preview}）";
+            }
+            if (skippedDetails.Count > 0)
+            {
+                _logger.LogWarning("CSV import skipped {Count} rows: {Details}",
+                    skippedDetails.Count,
+                    string.Join(" | ", skippedDetails.Take(10)));  // 只記前 10 筆，避免 log 過長
+            }
+            TempData["Message"] = message;
+            _logger.LogInformation("CSV import finished: Success={Success}, Skipped={Skipped}",
+                successCount, skippedDetails.Count);
             return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "newest", page });
         }
-
-        int successCount = 0;
-        var skippedDetails = new List<string>();
-
-        using var reader = new StreamReader(csvFile.OpenReadStream());
-        var lineNumber = 0;
-
-        while (!reader.EndOfStream)
+        catch (Exception ex)
         {
-            var line = await reader.ReadLineAsync();
-            lineNumber++;
-
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                skippedDetails.Add($"第 {lineNumber} 行：空行");
-                continue;
-            }
-
-            // 標題列
-            if (lineNumber == 1 && line.Contains("MatchType", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var parts = line.Split(',');
-
-            if (parts.Length < 2)
-            {
-                skippedDetails.Add($"第 {lineNumber} 行：欄位不足");
-                continue;
-            }
-
-            var rawType = parts[0].Trim();
-            var rawValue1 = parts.Length > 1 ? parts[1].Trim() : "";
-
-            // MatchType 或 MatchValue1 空白就跳過
-            if (string.IsNullOrWhiteSpace(rawType) || string.IsNullOrWhiteSpace(rawValue1))
-            {
-                skippedDetails.Add($"第 {lineNumber} 行：類型或條件1為空白 → {line}");
-                continue;
-            }
-
-            var mapping = new ErrorMapping
-            {
-                MatchType = rawType,
-                MatchValue1 = rawValue1,
-                MatchValue2 = parts.Length > 2 ? parts[2].Trim() : null,
-                MatchValue3 = parts.Length > 3 ? parts[3].Trim() : null,
-                ReplaceMessage = parts.Length > 4 ? parts[4].Trim() : null,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = "CSV"
-            };
-
-            if (mapping.MatchType != "Exact" && mapping.MatchType != "Fuzzy")
-            {
-                skippedDetails.Add($"第 {lineNumber} 行：類型不正確（{mapping.MatchType}）");
-                continue;
-            }
-
-            if (mapping.MatchType == "Exact")
-            {
-                mapping.MatchValue2 = null;
-                mapping.MatchValue3 = null;
-            }
-
-            await _repository.AddAsync(mapping);
-            successCount++;
+            _logger.LogError(ex, "CSV import failed");
+            TempData["Message"] = "CSV 匯入時發生錯誤";
+            return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "newest", page });
         }
-
-        if (successCount > 0)
-            await _repository.SaveChangesAsync();
-
-        // 組合訊息
-        var message = $"CSV 匯入完成：成功 {successCount} 筆";
-        if (skippedDetails.Count > 0)
-        {
-            message += $"，跳過 {skippedDetails.Count} 筆";
-            // 只顯示前 5 筆跳過明細，避免訊息過長
-            var preview = string.Join("；", skippedDetails.Take(5));
-            if (skippedDetails.Count > 5)
-                preview += "……";
-            message += $"（{preview}）";
-        }
-
-        TempData["Message"] = message;
-        return RedirectToPage("/Index", new { keyword = keyword ?? "", matchType = matchType ?? "", sort = sort ?? "newest", page });
+        
     }
 }

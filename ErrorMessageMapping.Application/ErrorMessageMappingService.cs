@@ -1,14 +1,19 @@
 ﻿using ErrorMessageMapping.Domain;
+using Microsoft.Extensions.Logging;
 
 namespace ErrorMessageMapping.Application;
 
 public class ErrorMessageMappingService
 {
     private readonly IErrorMessageMappingRepository _repository;
+    private readonly ILogger<ErrorMessageMappingService> _logger;
 
-    public ErrorMessageMappingService(IErrorMessageMappingRepository repository)
+    public ErrorMessageMappingService(
+        IErrorMessageMappingRepository repository,
+        ILogger<ErrorMessageMappingService> logger)
     {
         _repository = repository;
+        _logger = logger;
     }
 
     public async Task<MappingConvertResult> ConvertAsync(string rawMessage)
@@ -16,6 +21,7 @@ public class ErrorMessageMappingService
         var raw = (rawMessage ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(raw))
         {
+            _logger.LogInformation("Convert called with empty message");
             return new MappingConvertResult { SourceMessage = raw };
         }
 
@@ -25,6 +31,9 @@ public class ErrorMessageMappingService
         {
             if (string.Equals(item.MatchValue1.Trim(), raw, StringComparison.OrdinalIgnoreCase))
             {
+                _logger.LogInformation("Convert hit Exact: Value1={Value1}, SourceLength={Length}",
+                    item.MatchValue1, raw.Length);
+
                 return new MappingConvertResult
                 {
                     MatchType = MappingConstants.MatchTypeExact,
@@ -35,7 +44,7 @@ public class ErrorMessageMappingService
             }
         }
 
-        // 2. 再做模糊比對（條件多的優先，相同條件數則早建立的優先）
+        // 2. 再做模糊比對
         var fuzzyList = await _repository.GetByMatchTypeAsync(MappingConstants.MatchTypeFuzzy);
         var orderedFuzzy = fuzzyList
             .Select(x => new
@@ -51,6 +60,9 @@ public class ErrorMessageMappingService
         {
             if (IsFuzzyMatch(raw, item.Mapping))
             {
+                _logger.LogInformation("Convert hit Fuzzy: Value1={Value1}, SourceLength={Length}",
+                    item.Mapping.MatchValue1, raw.Length);
+
                 return new MappingConvertResult
                 {
                     MatchType = MappingConstants.MatchTypeFuzzy,
@@ -62,6 +74,8 @@ public class ErrorMessageMappingService
         }
 
         // 未命中
+        _logger.LogInformation("Convert miss: SourceLength={Length}", raw.Length);
+
         return new MappingConvertResult
         {
             MatchType = "None",
