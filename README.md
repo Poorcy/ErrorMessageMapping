@@ -4,6 +4,16 @@
 
 本專案以 .NET 8 實作，採用分層架構，重點展示核心比對邏輯、可測試性與基本維運考量。
 
+## 畫面預覽
+
+### 維護頁面
+
+![維護頁面](docs/screenshots/maintenance-page.png)
+
+### 轉換 API
+
+![API 測試](docs/screenshots/api-postman.png)
+
 ## 功能特色
 
 - **精準比對**：完全相等（忽略大小寫與前後空白）
