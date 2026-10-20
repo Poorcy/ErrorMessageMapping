@@ -1,5 +1,9 @@
 # Error Message Mapping Service
 
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
+![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-8.0-512BD4?logo=dotnet)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 一個用於將系統錯誤訊息轉換為較易理解文字的服務。支援精準比對與模糊比對，並提供維護頁面與轉換 API。
 
 本專案以 .NET 8 實作，採用分層架構，重點展示核心比對邏輯、可測試性與基本維運考量。
@@ -137,7 +141,7 @@ dotnet test
 
 ## 設計取捨
 
-- **每次請求載入規則**：規則量不大時簡單可靠；若未來規則增多可改為快取。
+- **每次請求載入規則**：規則量少時單純可靠；若未來規則增多可改為快取。
 - **未處理並發更新**：後寫入者覆蓋先寫入者。若需嚴格控制可加入樂觀鎖定（使用RowVersion）。
 - **API Key 放在 appsettings**：示範用途。可改用 User Secrets、環境變數或密鑰管理服務。
 - **SQLite**：方便本機執行與展示，可輕易替換為 SQL Server 或其他資料庫（主要修改 Infrastructure 與連線設定）。
