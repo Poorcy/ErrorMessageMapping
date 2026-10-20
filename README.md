@@ -90,10 +90,10 @@ ErrorMessageMapping/
 
 ### API Key
 
-預設示範用 Key 位於 `appsettings.json`：
+開發環境建議使用 User Secrets：
 
-```json
-"ApiKey": "your-api-key-12345"
+```bash
+dotnet user-secrets set "ApiKey" "your-key-here"
 ```
 
 呼叫轉換 API 時需在 Header 帶上：
