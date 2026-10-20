@@ -79,7 +79,7 @@ ErrorMessageMapping/
 預設示範用 Key 位於 `appsettings.json`：
 
 ```json
-"ApiKey": "your-demo-api-key-12345"
+"ApiKey": "your-api-key-12345"
 ```
 
 呼叫轉換 API 時需在 Header 帶上：
