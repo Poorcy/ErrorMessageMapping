@@ -85,7 +85,6 @@ ErrorMessageMapping/
 啟動後會自動建立 SQLite 資料庫（`errormapping.db`）並寫入種子資料。
 
 - 維護頁面：`https://localhost:{port}/`
-- Swagger：`https://localhost:{port}/swagger`（若有保留）
 - 轉換 API：`POST /api/Mapping/convert`
 
 ### API Key
